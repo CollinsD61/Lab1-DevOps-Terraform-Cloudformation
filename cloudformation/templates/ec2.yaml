@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation EC2 Template - Creates Public (Bastion) and Private EC2 instances.'
+
+Parameters:
+  PublicSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: 'Subnet ID for the public instance'
+  PrivateSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: 'Subnet ID for the private instance'
+  PublicSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: 'Security Group ID for the public instance'
+  PrivateSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: 'Security Group ID for the private instance'
+  InstanceType:
+    Type: String
+    Default: 't2.micro'
+    Description: 'EC2 Instance Type'
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: 'Name of an existing EC2 KeyPair to enable SSH access to the instances'
+  AmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+    Description: 'The SSM Parameter path for the latest Amazon Linux 2 AMI'
+  EnvironmentName:
+    Type: String
+    Default: 'lab-devops'
+    Description: 'Environment tag name'
+
+Resources:
+  PublicEc2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref AmiId
+      KeyName: !Ref KeyName
+      SubnetId: !Ref PublicSubnetId
+      SecurityGroupIds:
+        - !Ref PublicSecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-public-ec2'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Type
+          Value: 'public'
+
+  PrivateEc2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref AmiId
+      KeyName: !Ref KeyName
+      SubnetId: !Ref PrivateSubnetId
+      SecurityGroupIds:
+        - !Ref PrivateSecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-private-ec2'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Type
+          Value: 'private'
+
+Outputs:
+  PublicInstanceId:
+    Description: 'Public EC2 Instance ID'
+    Value: !Ref PublicEc2Instance
+  PublicInstancePublicIp:
+    Description: 'Public IP of Public EC2'
+    Value: !GetAtt PublicEc2Instance.PublicIp
+  PrivateInstanceId:
+    Description: 'Private EC2 Instance ID'
+    Value: !Ref PrivateEc2Instance
+  PrivateInstancePrivateIp:
+    Description: 'Private IP of Private EC2'
+    Value: !GetAtt PrivateEc2Instance.PrivateIp

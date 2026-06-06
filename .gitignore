@@ -1,0 +1,79 @@
+# ==============================================================================
+# Terraform GitIgnore
+# ==============================================================================
+# Local directory for managing plugins and metadata
+.terraform/
+
+# Personal variables file containing potentially sensitive local settings
+terraform.tfvars
+terraform.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+
+# Local state files (can contain secrets in plain text)
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Override files (local developer configurations)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI configuration files
+.terraformrc
+terraform.rc
+
+
+# ==============================================================================
+# Python & Virtual Environment (Tests)
+# ==============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment folder generated locally by run_tests.ps1
+tests/venv/
+venv/
+.venv/
+env/
+ENV/
+
+# pytest cache and reports
+.pytest_cache/
+.pytest/
+htmlcov/
+.tox/
+.nosexy
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+
+
+# ==============================================================================
+# Operating System & General
+# ==============================================================================
+# Windows metadata
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# macOS metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Local IDE configuration
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp

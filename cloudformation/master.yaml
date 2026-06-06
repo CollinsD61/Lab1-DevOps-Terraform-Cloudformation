@@ -1,0 +1,103 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Master CloudFormation Template - Orchestrates VPC, Security Groups, and EC2 nested stacks.'
+
+Parameters:
+  TemplateBucket:
+    Type: String
+    Description: 'S3 Bucket Name where nested templates (vpc.yaml, security-groups.yaml, ec2.yaml) are uploaded'
+  TemplateFolder:
+    Type: String
+    Default: 'templates/'
+    Description: 'Folder path inside the S3 bucket where templates are located (must end with a slash if not empty)'
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: 'Name of an existing EC2 KeyPair to enable SSH access'
+  AdminIpCidr:
+    Type: String
+    Default: '0.0.0.0/0'
+    Description: 'CIDR Block allowed to access the Bastion host via SSH (e.g. 203.0.113.50/32)'
+  InstanceType:
+    Type: String
+    Default: 't2.micro'
+    Description: 'EC2 Instance Type'
+  EnvironmentName:
+    Type: String
+    Default: 'lab-devops'
+    Description: 'Environment tag name'
+  VpcCidr:
+    Type: String
+    Default: '10.0.0.0/16'
+  PublicSubnetCidr:
+    Type: String
+    Default: '10.0.1.0/24'
+  PrivateSubnetCidr:
+    Type: String
+    Default: '10.0.2.0/24'
+  AvailabilityZone:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: 'us-east-1a'
+
+Resources:
+  VpcStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://${TemplateBucket}.s3.amazonaws.com/${TemplateFolder}vpc.yaml'
+      Parameters:
+        VpcCidr: !Ref VpcCidr
+        PublicSubnetCidr: !Ref PublicSubnetCidr
+        PrivateSubnetCidr: !Ref PrivateSubnetCidr
+        AvailabilityZone: !Ref AvailabilityZone
+        EnvironmentName: !Ref EnvironmentName
+
+  SecurityGroupsStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: VpcStack
+    Properties:
+      TemplateURL: !Sub 'https://${TemplateBucket}.s3.amazonaws.com/${TemplateFolder}security-groups.yaml'
+      Parameters:
+        VpcId: !GetAtt VpcStack.Outputs.VpcId
+        AdminIpCidr: !Ref AdminIpCidr
+        EnvironmentName: !Ref EnvironmentName
+
+  Ec2Stack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: SecurityGroupsStack
+    Properties:
+      TemplateURL: !Sub 'https://${TemplateBucket}.s3.amazonaws.com/${TemplateFolder}ec2.yaml'
+      Parameters:
+        PublicSubnetId: !GetAtt VpcStack.Outputs.PublicSubnetId
+        PrivateSubnetId: !GetAtt VpcStack.Outputs.PrivateSubnetId
+        PublicSecurityGroupId: !GetAtt SecurityGroupsStack.Outputs.PublicSecurityGroupId
+        PrivateSecurityGroupId: !GetAtt SecurityGroupsStack.Outputs.PrivateSecurityGroupId
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyName
+        EnvironmentName: !Ref EnvironmentName
+
+Outputs:
+  VpcId:
+    Description: 'VPC ID'
+    Value: !GetAtt VpcStack.Outputs.VpcId
+  PublicSubnetId:
+    Description: 'Public Subnet ID'
+    Value: !GetAtt VpcStack.Outputs.PublicSubnetId
+  PrivateSubnetId:
+    Description: 'Private Subnet ID'
+    Value: !GetAtt VpcStack.Outputs.PrivateSubnetId
+  PublicSecurityGroupId:
+    Description: 'Public Security Group ID'
+    Value: !GetAtt SecurityGroupsStack.Outputs.PublicSecurityGroupId
+  PrivateSecurityGroupId:
+    Description: 'Private Security Group ID'
+    Value: !GetAtt SecurityGroupsStack.Outputs.PrivateSecurityGroupId
+  PublicInstanceId:
+    Description: 'Public EC2 Instance ID'
+    Value: !GetAtt Ec2Stack.Outputs.PublicInstanceId
+  PublicInstancePublicIp:
+    Description: 'Public IP of Public EC2'
+    Value: !GetAtt Ec2Stack.Outputs.PublicInstancePublicIp
+  PrivateInstanceId:
+    Description: 'Private EC2 Instance ID'
+    Value: !GetAtt Ec2Stack.Outputs.PrivateInstanceId
+  PrivateInstancePrivateIp:
+    Description: 'Private IP of Private EC2'
+    Value: !GetAtt Ec2Stack.Outputs.PrivateInstancePrivateIp

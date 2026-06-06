@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation Security Groups Template - Configures security groups for Public and Private EC2 instances.'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: 'ID of the VPC'
+  AdminIpCidr:
+    Type: String
+    Default: '0.0.0.0/0'
+    Description: 'CIDR Block allowed to access the Bastion host via SSH'
+  EnvironmentName:
+    Type: String
+    Default: 'lab-devops'
+    Description: 'Environment tag name'
+
+Resources:
+  PublicEc2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Allow SSH from Admin IP'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AdminIpCidr
+          Description: 'Allow SSH from Admin IP'
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: '0.0.0.0/0'
+          Description: 'Allow all outbound traffic'
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-public-ec2-sg'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  PrivateEc2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Allow SSH only from Public EC2 Security Group'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref PublicEc2SecurityGroup
+          Description: 'Allow SSH only from Bastion SG'
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: '0.0.0.0/0'
+          Description: 'Allow all outbound traffic'
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-private-ec2-sg'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+Outputs:
+  PublicSecurityGroupId:
+    Description: 'Public Security Group ID'
+    Value: !Ref PublicEc2SecurityGroup
+  PrivateSecurityGroupId:
+    Description: 'Private Security Group ID'
+    Value: !Ref PrivateEc2SecurityGroup
